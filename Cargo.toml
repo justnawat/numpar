@@ -1,10 +1,14 @@
 [package]
-name = "fp-project"
+name = "numpar"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "numpar"
+crate-type = ["cdylib"]
 
 [dependencies]
 rayon = "1.5"
 rand = "0.8"
+pyo3 = { version = "0.16.5", features = ["extension-module"] }
