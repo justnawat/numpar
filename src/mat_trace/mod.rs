@@ -8,7 +8,6 @@ use rayon::prelude::ParallelIterator;
 #[pyfunction]
 pub fn trace(matrix: &PyList) -> PyResult<f64> {
     match matrix.extract::<Vec<Vec<f64>>>() {
-        Err(_) => Err(PyTypeError::new_err("Parameter not a matrix.")),
         Ok(r_matrix) => {
             let n = r_matrix.len();
             let lens = r_matrix.par_iter().map(|row| row.len()).sum();
@@ -21,5 +20,8 @@ pub fn trace(matrix: &PyList) -> PyResult<f64> {
                 Ok(r_matrix.par_iter().enumerate().map(|(i, row)| row[i]).sum())
             }
         }
+        _ => Err(PyTypeError::new_err(
+            "Parameter cannot be converted to matrix.",
+        )),
     }
 }

@@ -1,3 +1,4 @@
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::{pyfunction, PyResult};
 use pyo3::types::PyList;
 use rayon::iter::IndexedParallelIterator;
@@ -6,10 +7,16 @@ use rayon::prelude::ParallelIterator;
 
 #[pyfunction]
 pub fn dot(xs: &PyList, ys: &PyList) -> PyResult<f64> {
-    let xs: Vec<f64> = xs.extract()?;
-    let ys: Vec<f64> = ys.extract()?;
-
-    Ok(xs.par_iter().zip(ys.par_iter()).map(|(&x, &y)| x * y).sum())
+    match (xs.extract::<Vec<f64>>(), ys.extract::<Vec<f64>>()) {
+        (Ok(xs_vec), Ok(ys_vec)) => Ok(xs_vec
+            .par_iter()
+            .zip(ys_vec.par_iter())
+            .map(|(&x, &y)| x * y)
+            .sum()),
+        _ => Err(PyTypeError::new_err(
+            "Parameter(s) cannot be converted to list of floats.",
+        )),
+    }
 }
 
 mod test {
