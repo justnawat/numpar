@@ -12,15 +12,15 @@ The full proposal can be found in `Proposal.pdf`
 
 This project aims to implement the following methods from `numpy` (as `np`) in Rust such that they will default to running in parallel when possible or beneficial:
 
-- `np.dot`: Dot product of two arrays/vectors
-- `np.outer`: Outer product of two arrays/vectors
-- `np.matmul` or `@`: Matrix multiplication of matrices or matrix with arrays/vectors
-- `np.tensordot`: Tensor dot product
+- `np.dot`: Dot product of two arrays/vectors (Done)
+- `np.outer`: Outer product of two arrays/vectors (Done, slow)
+- `np.matmul` ~~or `@`~~: Matrix multiplication of matrices or matrix with arrays/vectors
+- ~~`np.tensordot`: Tensor dot product~~ (Too complicated)
 - `np.linalg.matrix_power`: Raising a matrix to a power
-- `np.linalg.norm`: Norm of a vector
+- `np.linalg.norm`: Norm of a vector (Done)
 - `np.linalg.det`: Determinant of matrix
 - `np.linalg.matrix_rank`: Rank of matrix
-- `np.linalg.trace`: Trace of matrix
+- `np.linalg.trace`: Trace of matrix (Done)
 - `np.linalg.solve`: Solve a matrix equation
 - `np.linalg.inv`: Inverse of matrix
 
@@ -29,6 +29,8 @@ Note that some of these may not be implemented by submission date due to ~~lazin
 ## Measuring Success
 
 We are measuring success using the running time of each function that will implemented compared to vanilla NumPy on large data (suppose a function is for matrix computation, then the matrix would need to be quite large to minimize parallelism overhead. If it can beat NumPy, great. If it cannot, then that's unfortunate.
+
+The file `test.py` has some test cases for each of the implemented functions. Simply run the `run.sh` script to run the test cases. Also, make sure that you have the right dependencies.
 
 # Meme of the Repo
 
