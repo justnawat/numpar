@@ -1,22 +1,23 @@
+use pyo3::prelude::*;
+
 mod dot_prod;
 use dot_prod::dot;
 
 mod outer_prod;
 use outer_prod::outer;
 
-use pyo3::prelude::*;
+mod vec_norm;
+use vec_norm::norm;
 
-/// Formats the sum of two numbers as string.
-#[pyfunction]
-fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
-    Ok((a + b).to_string())
-}
+mod mat_trace;
+use mat_trace::trace;
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn numpar(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_function(wrap_pyfunction!(dot, m)?)?;
     m.add_function(wrap_pyfunction!(outer, m)?)?;
+    // m.add_function(wrap_pyfunction!(norm, m)?)?;
+    m.add_function(wrap_pyfunction!(trace, m)?)?;
     Ok(())
 }
