@@ -13,6 +13,9 @@ use vec_norm::norm;
 mod mat_trace;
 use mat_trace::trace;
 
+mod mat_transpose;
+use mat_transpose::transpose;
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn numpar(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -20,5 +23,6 @@ fn numpar(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(outer, m)?)?;
     m.add_function(wrap_pyfunction!(norm, m)?)?;
     m.add_function(wrap_pyfunction!(trace, m)?)?;
+    m.add_function(wrap_pyfunction!(transpose, m)?)?;
     Ok(())
 }

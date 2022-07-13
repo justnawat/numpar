@@ -14,10 +14,10 @@ def test_function(name, np_ver, nw_ver, diff_computer):
     t3 = time_ns()
     total_diff = diff_computer(np_out, nw_out)
 
-    print(F"testing: {name}")
-    print(F"diff: {total_diff}")
-    print(F"np time: {(t2-t1)/1e9}, nw time: {(t3-t2)/1e9}")
-    print(F"improvement: {(t2-t1)/(t3-t2)}")
+    print(f"testing: {name}")
+    print(f"diff: {total_diff}")
+    print(f"np time: {(t2-t1)/1e9}, nw time: {(t3-t2)/1e9}")
+    print(f"improvement: {(t2-t1)/(t3-t2)}")
     print()
 
 
@@ -54,3 +54,12 @@ test_function("norm",
               lambda: np.linalg.norm(xs),
               lambda: nw.norm(xs),
               lambda o1, o2: abs(o2-o1))
+
+# transpose
+N = 5000
+M = 3000
+A = [[rd.random() * rd.randint(1, 10) for _ in range(N)] for _ in range(M)]
+test_function("transpose",
+              lambda: np.transpose(A),
+              lambda: nw.transpose(A),
+              lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))

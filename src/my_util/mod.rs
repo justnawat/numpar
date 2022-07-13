@@ -17,6 +17,13 @@ pub fn is_square_matrix(matrix: &Vec<Vec<f64>>) -> bool {
     n * n == lens
 }
 
+pub fn is_proper_matrix(matrix: &Vec<Vec<f64>>) -> bool {
+    let n = matrix.len();
+    let m = matrix[0].len();
+    let lens = matrix.par_iter().map(|vec| vec.len()).sum::<usize>();
+    n * m == lens
+}
+
 mod test {
     #[test]
     fn iden_generate_test() {
@@ -43,5 +50,19 @@ mod test {
         let nsq = vec![vec![7., 7., 7.], vec![5., 5., 5.]];
         assert!(super::is_square_matrix(&sq));
         assert!(!super::is_square_matrix(&nsq));
+    }
+
+    #[test]
+    fn proper_matrix_test() {
+        let proper = vec![vec![1, 2, 3, 4], vec![5, 5, 2, 2]]
+            .iter()
+            .map(|vec| vec.iter().map(|&elm| elm as f64).collect())
+            .collect();
+        let improper = vec![vec![1, 5, 5], vec![5, 5, 1, 1]]
+            .iter()
+            .map(|vec| vec.iter().map(|&elm| elm as f64).collect())
+            .collect();
+        assert!(super::is_proper_matrix(&proper));
+        assert!(!super::is_proper_matrix(&improper));
     }
 }

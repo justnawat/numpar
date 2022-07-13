@@ -12,17 +12,29 @@ The full proposal can be found in `Proposal.pdf`
 
 This project aims to implement the following methods from `numpy` (as `np`) in Rust such that they will default to running in parallel when possible or beneficial:
 
+### Basic Vector Operations
+
 - `np.dot`: Dot product of two arrays/vectors (Done)
-- `np.outer`: Outer product of two arrays/vectors (Done, slow)
-- `np.matmul` ~~or `@`~~: Matrix multiplication of matrices or matrix with arrays/vectors
-- ~~`np.tensordot`: Tensor dot product~~ (Too complicated)
-- `np.linalg.matrix_power`: Raising a matrix to a power
 - `np.linalg.norm`: Norm of a vector (Done)
-- `np.linalg.det`: Determinant of matrix
-- `np.linalg.matrix_rank`: Rank of matrix
+- `np.outer`: Outer product of two arrays/vectors (Done, slow)
+- ~~`np.tensordot`: Tensor dot product~~ (Too complicated)
+
+### Basic Matrix Operations
+
 - `np.linalg.trace`: Trace of matrix (Done)
-- `np.linalg.solve`: Solve a matrix equation
+- `np.transpose`: Matrix transpose (Done, slow)
+- `np.linalg.det`: Determinant of matrix
 - `np.linalg.inv`: Inverse of matrix
+
+### Matrix Multiplication-related Operations
+
+- `np.matmul` ~~or `@`~~: Matrix multiplication of matrices or matrix with arrays/vectors
+- `np.linalg.matrix_power`: Raising a matrix to a power
+
+### Matrix and System of Linear Equations-related Operations
+
+- `np.linalg.solve`: Solve a matrix equation
+- `np.linalg.matrix_rank`: Rank of matrix
 
 Note that some of these may not be implemented by submission date due to ~~laziness~~ not having enough time to work.
 
