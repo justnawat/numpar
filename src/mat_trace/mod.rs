@@ -1,3 +1,4 @@
+use crate::my_util::is_square_matrix;
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::{pyfunction, PyResult};
 use pyo3::types::PyList;
@@ -9,12 +10,9 @@ use rayon::prelude::ParallelIterator;
 pub fn trace(matrix: &PyList) -> PyResult<f64> {
     match matrix.extract::<Vec<Vec<f64>>>() {
         Ok(r_matrix) => {
-            let n = r_matrix.len();
-            let lens = r_matrix.par_iter().map(|row| row.len()).sum();
-
-            if n == 0 {
+            if r_matrix.len() == 0 {
                 Ok(0.0)
-            } else if n * n != lens {
+            } else if !is_square_matrix(&r_matrix) {
                 Err(PyTypeError::new_err("Matrix not square."))
             } else {
                 Ok(r_matrix.par_iter().enumerate().map(|(i, row)| row[i]).sum())

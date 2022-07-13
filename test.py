@@ -31,7 +31,7 @@ test_function("dot",
               lambda o1, o2: abs(o2-o1))
 
 # outer product
-N = 1000
+N = 10_000
 xs = [rd.random() * rd.randint(1, 10) for _ in range(N)]
 ys = [rd.random() * rd.randint(1, 10) for _ in range(N)]
 test_function("outer",
