@@ -17,7 +17,7 @@ use mat_trace::trace;
 fn numpar(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(dot, m)?)?;
     m.add_function(wrap_pyfunction!(outer, m)?)?;
-    // m.add_function(wrap_pyfunction!(norm, m)?)?;
+    m.add_function(wrap_pyfunction!(norm, m)?)?;
     m.add_function(wrap_pyfunction!(trace, m)?)?;
     Ok(())
 }

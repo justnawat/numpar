@@ -46,3 +46,11 @@ test_function("trace",
               lambda: np.trace(A),
               lambda: nw.trace(A),
               lambda o1, o2: abs(o2-o1))
+
+# norm
+N = 10_000_000
+xs = [rd.random() * rd.randint(1, 10) for _ in range(N)]
+test_function("norm",
+              lambda: np.linalg.norm(xs),
+              lambda: nw.norm(xs),
+              lambda o1, o2: abs(o2-o1))
