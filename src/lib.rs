@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 mod my_util;
+mod cwslice;
 
 mod dot_prod;
 use dot_prod::dot;

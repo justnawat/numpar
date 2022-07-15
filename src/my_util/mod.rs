@@ -1,5 +1,6 @@
 use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 
+#[allow(dead_code)]
 pub fn generate_identity_matrix(n: usize) -> Vec<Vec<f64>> {
     (0..n)
         .into_par_iter()

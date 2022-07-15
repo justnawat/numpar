@@ -1,9 +1,11 @@
+use crate::cwslice::UnsafeSlice;
 use crate::my_util::is_proper_matrix;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::PyList;
 use pyo3::{pyfunction, PyResult};
-use rayon::iter::IntoParallelIterator;
-use rayon::iter::ParallelIterator;
+use rayon::iter::IndexedParallelIterator;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use rayon::slice::ParallelSlice;
 
 #[pyfunction]
 pub fn transpose(matrix: &PyList) -> PyResult<Vec<Vec<f64>>> {
@@ -17,22 +19,27 @@ pub fn transpose(matrix: &PyList) -> PyResult<Vec<Vec<f64>>> {
                 Ok(rust_transpose(&r_matrix))
             }
         }
-        Err(_) => Err(PyTypeError::new_err("Parameter not a matrix.")),
+        _ => Err(PyTypeError::new_err("Parameter not a matrix.")),
     }
 }
 
+// still slower than np
 pub fn rust_transpose(r_matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    let n = r_matrix.len();
-    let m = r_matrix[0].len();
+    let row_len = r_matrix.len();
+    let col_len = r_matrix[0].len();
 
-    (0..m)
-        .into_par_iter()
-        .map(|t_row| {
-            (0..n)
-                .into_par_iter()
-                .map(|t_col| r_matrix[t_col][t_row])
-                .collect()
+    let mut row_major: Vec<f64> = vec![0.; col_len * row_len];
+    let unsafe_rm = UnsafeSlice::new(row_major.as_mut_slice());
+
+    r_matrix.par_iter().enumerate().for_each(|(i_row, row)| {
+        row.par_iter().enumerate().for_each(|(i_elm, &elm)| unsafe {
+            unsafe_rm.write(i_elm * row_len + i_row, elm);
         })
+    });
+
+    row_major
+        .par_chunks(row_len)
+        .map(|chunk| chunk.to_vec())
         .collect()
 }
 
