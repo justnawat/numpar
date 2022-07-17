@@ -5,14 +5,8 @@ mod my_util;
 mod vector_ops;
 use vector_ops::*;
 
-mod mat_trace;
-use mat_trace::trace;
-
-mod mat_transpose;
-use mat_transpose::transpose;
-
-mod mat_det;
-use mat_det::det;
+mod matrix_ops;
+use matrix_ops::*;
 
 /// A Python module implemented in Rust.
 #[pymodule]
