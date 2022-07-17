@@ -11,10 +11,10 @@ use rayon::slice::ParallelSlice;
 pub fn transpose(matrix: &PyList) -> PyResult<Vec<Vec<f64>>> {
     match matrix.extract::<Vec<Vec<f64>>>() {
         Ok(r_matrix) => {
-            if !is_proper_matrix(&r_matrix) {
-                Err(PyTypeError::new_err("Parameter not a proper matrix."))
-            } else if r_matrix.len() == 0 {
+            if r_matrix.len() == 0 {
                 Ok(vec![vec![]])
+            } else if !is_proper_matrix(&r_matrix) {
+                Err(PyTypeError::new_err("Parameter not a proper matrix."))
             } else {
                 Ok(rust_transpose(&r_matrix))
             }
