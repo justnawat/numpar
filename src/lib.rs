@@ -2,14 +2,8 @@ use pyo3::prelude::*;
 mod cwslice;
 mod my_util;
 
-mod dot_prod;
-use dot_prod::dot;
-
-mod outer_prod;
-use outer_prod::outer;
-
-mod vec_norm;
-use vec_norm::norm;
+mod vector_ops;
+use vector_ops::*;
 
 mod mat_trace;
 use mat_trace::trace;

@@ -1,9 +1,28 @@
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::{pyfunction, PyResult};
 use pyo3::types::PyList;
-use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelRefIterator;
-use rayon::prelude::ParallelIterator;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefIterator, ParallelIterator};
+
+#[pyfunction]
+pub fn norm(xs: &PyList) -> PyResult<f64> {
+    match xs.extract::<Vec<f64>>() {
+        Ok(xs_vec) => Ok(xs_vec.par_iter().map(|x| x * x).sum::<f64>().sqrt()),
+        _ => Err(PyTypeError::new_err(
+            "Parameter cannot be converted to list of floats.",
+        )),
+    }
+}
+
+#[pyfunction]
+pub fn outer(xs: &PyList, ys: &PyList) -> PyResult<Vec<Vec<f64>>> {
+    let xs: Vec<f64> = xs.extract()?;
+    let ys: Vec<f64> = ys.extract()?;
+
+    Ok(xs
+        .par_iter()
+        .map(|&x| ys.par_iter().map(|&y| y * x).collect())
+        .collect())
+}
 
 #[pyfunction]
 pub fn dot(xs: &PyList, ys: &PyList) -> PyResult<f64> {
