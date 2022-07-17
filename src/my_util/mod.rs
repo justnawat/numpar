@@ -19,6 +19,10 @@ pub fn is_square_matrix(matrix: &Vec<Vec<f64>>) -> bool {
 }
 
 pub fn is_proper_matrix(matrix: &Vec<Vec<f64>>) -> bool {
+    if matrix.len() == 0 {
+        return false;
+    }
+
     let n = matrix.len();
     let m = matrix[0].len();
     let lens = matrix.par_iter().map(|vec| vec.len()).sum::<usize>();
