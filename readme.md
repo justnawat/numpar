@@ -4,6 +4,20 @@ This is a term project for the course ICCS311: Functional and Parallel Programmi
 
 Explanation video will be put [here](https://youtu.be/dQw4w9WgXcQ) once it has been done.
 
+# Set up
+
+In order to use the project, run the following commands:
+
+```sh
+# only has to set up once
+python3 -m venv venv
+source ./venv/bin/activate
+pip install numpy maturin
+
+# ensure that venv is activated
+./run.sh
+```
+
 # A Quick Look at the Project
 
 The full proposal can be found in `Proposal.pdf`
