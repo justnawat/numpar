@@ -15,27 +15,36 @@ pub fn norm(xs: &PyList) -> PyResult<f64> {
 
 #[pyfunction]
 pub fn outer(xs: &PyList, ys: &PyList) -> PyResult<Vec<Vec<f64>>> {
-    let xs: Vec<f64> = xs.extract()?;
-    let ys: Vec<f64> = ys.extract()?;
+    match (xs.extract::<Vec<f64>>(), ys.extract::<Vec<f64>>()) {
+        (Ok(xs), Ok(ys)) => Ok(rust_outer(&xs, &ys)),
+        _ => Err(PyTypeError::new_err("Malformed parameter(s)")),
+    }
+}
 
-    Ok(xs
-        .par_iter()
+pub fn rust_outer(xs: &Vec<f64>, ys: &Vec<f64>) -> Vec<Vec<f64>> {
+    xs.par_iter()
         .map(|&x| ys.par_iter().map(|&y| y * x).collect())
-        .collect())
+        .collect()
 }
 
 #[pyfunction]
 pub fn dot(xs: &PyList, ys: &PyList) -> PyResult<f64> {
     match (xs.extract::<Vec<f64>>(), ys.extract::<Vec<f64>>()) {
-        (Ok(xs_vec), Ok(ys_vec)) => Ok(xs_vec
-            .par_iter()
-            .zip(ys_vec.par_iter())
-            .map(|(&x, &y)| x * y)
-            .sum()),
+        (Ok(xs_vec), Ok(ys_vec)) => {
+            if xs_vec.len() == ys.len() {
+                Ok(rust_dot(&xs_vec, &ys_vec))
+            } else {
+                Err(PyTypeError::new_err("Parameters have different lengths"))
+            }
+        }
         _ => Err(PyTypeError::new_err(
             "Parameter(s) cannot be converted to list of floats.",
         )),
     }
+}
+
+pub fn rust_dot(xs: &Vec<f64>, ys: &Vec<f64>) -> f64 {
+    xs.par_iter().zip(ys.par_iter()).map(|(&x, &y)| x * y).sum()
 }
 
 mod test {
