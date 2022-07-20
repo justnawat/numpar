@@ -222,7 +222,27 @@ pub fn augment(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
         .collect()
 }
 
+pub fn extract_last_cols(a: &Vec<Vec<f64>>, n: usize) -> Vec<Vec<f64>> {
+    let b = a[0].len() - n;
+    a.par_iter().map(|a_row| a_row[b..].to_vec()).collect()
+}
+
 mod test {
+    #[test]
+    fn extract_test() {
+        use crate::my_util::generate_identity_matrix;
+        let a: Vec<Vec<f64>> = vec![
+            vec![1, 0, 0, 1, 0, 0],
+            vec![0, 1, 0, 0, 1, 0],
+            vec![0, 0, 1, 0, 0, 1],
+        ]
+        .iter()
+        .map(|row| row.iter().map(|e| *e as f64).collect())
+        .collect();
+        let out = super::extract_last_cols(&a, 3);
+        assert_eq!(&generate_identity_matrix(3), &out);
+    }
+
     #[test]
     fn aug_test() {
         use crate::my_util::generate_identity_matrix;
