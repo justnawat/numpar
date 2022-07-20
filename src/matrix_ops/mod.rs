@@ -45,47 +45,12 @@ pub fn det(matrix: &PyList) -> PyResult<f64> {
 }
 
 pub fn rust_det(matrix: &Vec<Vec<f64>>) -> f64 {
-    let n = matrix.len();
-    if n <= 3 {
-        rust_det_leq3(matrix)
-    } else {
-        0.
-    }
-}
-
-fn rust_det_leq3(matrix: &Vec<Vec<f64>>) -> f64 {
-    let n = matrix.len();
-
-    let to_add: f64 = (0..n)
-        .into_par_iter()
-        .map(|o_offset| {
-            (0..n)
-                .into_par_iter()
-                .map(|i_offset| {
-                    // dbg!(i_offset, (i_offset + o_offset) % n);
-                    matrix[i_offset][(i_offset + o_offset) % n]
-                })
-                .product::<f64>()
-        })
-        .sum();
-    // dbg!(to_add);
-
-    let to_subtract: f64 = (0..n)
-        .into_par_iter()
-        .rev()
-        .map(|o_offset| {
-            (0..n)
-                .into_par_iter()
-                .map(|i_offset| {
-                    // dbg!(n - i_offset - 1, (i_offset + n - o_offset - 1) % n);
-                    matrix[n - i_offset - 1][(i_offset + n - o_offset - 1) % n]
-                })
-                .product::<f64>()
-        })
-        .sum();
-    // dbg!(to_subtract);
-
-    to_add - to_subtract
+    let triangular = fwd_elim(matrix);
+    triangular
+        .par_iter()
+        .enumerate()
+        .map(|(i, row)| row[i])
+        .product()
 }
 
 #[pyfunction]
@@ -232,7 +197,7 @@ pub fn fwd_elim(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
             (i + 1..m).for_each(|ii| {
                 let to_elim = res[(ii) * cols_count + i].load(SeqCst);
                 let factor = to_elim / head;
-                dbg!(head, to_elim, factor);
+                // dbg!(head, to_elim, factor);
 
                 let b2 = ii * cols_count;
                 (i..cols_count).into_par_iter().for_each(|ei| {

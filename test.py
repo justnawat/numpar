@@ -51,11 +51,17 @@ test_function("outer",
               lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))
 
 # trace
-N = 1_000
+N = 500
 A = [[rd.random() * rd.randint(1, 5) for _ in range(N)] for _ in range(N)]
 test_function("trace",
               lambda: np.trace(A),
               lambda: nw.trace(A),
+              lambda o1, o2: abs(o2-o1))
+
+# det
+test_function("det",
+              lambda: np.linalg.det(A),
+              lambda: nw.det(A),
               lambda o1, o2: abs(o2-o1))
 
 # transpose

@@ -37,7 +37,7 @@ This project aims to implement the following methods from `numpy` (as `np`) in R
 
 - `np.linalg.trace`: Trace of matrix (Done)
 - `np.transpose`: Matrix transpose (Done, slow)
-- `np.linalg.det`: Determinant of matrix
+- `np.linalg.det`: Determinant of matrix (Done, slow)
 - `np.linalg.inv`: Inverse of matrix
 
 ### Matrix Multiplication-related Operations
