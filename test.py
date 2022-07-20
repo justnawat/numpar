@@ -48,7 +48,7 @@ ys = [rd.random() * rd.randint(1, 10) for _ in range(N)]
 test_function("outer",
               lambda: np.outer(xs, ys),
               lambda: nw.outer(xs, ys),
-              lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))
+              lambda o1, o2: np.linalg.norm(o1-o2))
 
 # trace
 N = 500
@@ -71,18 +71,18 @@ test_function("det",
 test_function("transpose",
               lambda: np.transpose(A),
               lambda: nw.transpose(A),
-              lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))
+              lambda o1, o2: np.linalg.norm(o1-o2))
 
 # matmul
 B = [[rd.random() - 0.5 for _ in range(N)] for _ in range(N)]
 test_function("matmul",
               lambda: np.matmul(A, B),
               lambda: nw.matmul(A, B),
-              lambda o1, o2: np.linalg.norm(o1) - np.linalg.norm(o2))
+              lambda o1, o2: np.linalg.norm(o1-o2))
 
 # mat_pow
 E = 50
 test_function("matrix_power",
               lambda: np.linalg.matrix_power(B, E),
               lambda: nw.matrix_power(B, E),
-              lambda o1, o2: np.linalg.norm(o1) - np.linalg.norm(o2))
+              lambda o1, o2: np.linalg.norm(o1-o2))
