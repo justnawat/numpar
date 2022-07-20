@@ -175,7 +175,6 @@ fn rmp_helper(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
     }
 }
 
-#[allow(dead_code)]
 pub fn fwd_elim(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let m = matrix.len();
     let cols_count = matrix[0].len();
@@ -211,7 +210,36 @@ pub fn fwd_elim(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     row_major_to_matrix(&rm_res, cols_count)
 }
 
+pub fn augment(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    a.par_iter()
+        .zip(b.par_iter())
+        .map(|(a_row, b_row)| {
+            let mut c = vec![];
+            c.extend(a_row);
+            c.extend(b_row);
+            c
+        })
+        .collect()
+}
+
 mod test {
+    #[test]
+    fn aug_test() {
+        use crate::my_util::generate_identity_matrix;
+        let a = generate_identity_matrix(3);
+        let b = generate_identity_matrix(3);
+        let ans: Vec<Vec<f64>> = vec![
+            vec![1, 0, 0, 1, 0, 0],
+            vec![0, 1, 0, 0, 1, 0],
+            vec![0, 0, 1, 0, 0, 1],
+        ]
+        .iter()
+        .map(|row| row.iter().map(|e| *e as f64).collect())
+        .collect();
+
+        assert_eq!(&ans, &super::augment(&a, &b));
+    }
+
     #[test]
     fn fwd_test() {
         let a = vec![
