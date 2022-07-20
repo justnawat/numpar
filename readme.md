@@ -42,8 +42,8 @@ This project aims to implement the following methods from `numpy` (as `np`) in R
 
 ### Matrix Multiplication-related Operations
 
-- `np.matmul` ~~or `@`~~: Matrix multiplication of matrices or matrix with arrays/vectors
-- `np.linalg.matrix_power`: Raising a matrix to a power
+- `np.matmul` ~~or `@`~~: Matrix multiplication of matrices or matrix with arrays/vectors (Done, slow)
+- `np.linalg.matrix_power`: Raising a matrix to a power (Done, slow)
 
 ### Matrix and System of Linear Equations-related Operations
 
