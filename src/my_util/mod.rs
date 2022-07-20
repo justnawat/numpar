@@ -1,4 +1,7 @@
-use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
+use rayon::{
+    iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator},
+    slice::ParallelSlice,
+};
 
 #[allow(dead_code)]
 pub fn generate_identity_matrix(n: usize) -> Vec<Vec<f64>> {
@@ -9,6 +12,21 @@ pub fn generate_identity_matrix(n: usize) -> Vec<Vec<f64>> {
             row[i] = 1.;
             row
         })
+        .collect()
+}
+
+#[allow(dead_code)]
+pub fn generate_identity_matrix_row_major(n: usize) -> Vec<f64> {
+    let mut res = vec![0.; n * n];
+    (0..n).for_each(|i| res[i * n + i] = 1.);
+    res
+}
+
+#[allow(dead_code)]
+pub fn row_major_to_matrix(row_major: &Vec<f64>, cols: usize) -> Vec<Vec<f64>> {
+    row_major
+        .par_chunks(cols)
+        .map(|chunk| chunk.to_vec())
         .collect()
 }
 

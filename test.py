@@ -4,21 +4,26 @@ import numpy as np
 import random as rd
 
 rd.seed(6380496)
+print("Starting...")
 
 
 def test_function(name, np_ver, nw_ver, diff_computer):
+    print()
+    print(f"testing: {name}")
+
     t1 = time_ns()
     np_out = np_ver()
     t2 = time_ns()
-    nw_out = nw_ver()
+    print("np done", end="\t")
     t3 = time_ns()
+    nw_out = nw_ver()
+    t4 = time_ns()
+    print("nw done")
     total_diff = diff_computer(np_out, nw_out)
 
-    print()
-    print(f"testing: {name}")
     print(f"diff: {total_diff}")
-    print(f"np time: {(t2-t1)/1e9}, nw time: {(t3-t2)/1e9}")
-    print(f"improvement: {(t2-t1)/(t3-t2)}")
+    print(f"np time: {(t2-t1)/1e9}, nw time: {(t4-t3)/1e9}")
+    print(f"improvement: {(t2-t1)/(t4-t3)}")
 
 
 # dot product
@@ -46,8 +51,8 @@ test_function("outer",
               lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))
 
 # trace
-N = 5_000
-A = [[rd.random() * rd.randint(1, 10) for _ in range(N)] for _ in range(N)]
+N = 1_000
+A = [[rd.random() * rd.randint(1, 5) for _ in range(N)] for _ in range(N)]
 test_function("trace",
               lambda: np.trace(A),
               lambda: nw.trace(A),
@@ -62,11 +67,16 @@ test_function("transpose",
               lambda: nw.transpose(A),
               lambda o1, o2: sum([sum(abs(np.array(p) - np.array(w))) for p, w in zip(o1, o2)]))
 
-# determinant
-N = 10
-A = [[rd.random() - 0.5 for _ in range(N)] for _ in range(N)]
-# print(A)
-test_function("det",
-              lambda: np.linalg.det(A),
-              lambda: nw.det(A),
-              lambda o1, o2: o2-o1)
+# matmul
+B = [[rd.random() - 0.5 for _ in range(N)] for _ in range(N)]
+test_function("matmul",
+              lambda: np.matmul(A, B),
+              lambda: nw.matmul(A, B),
+              lambda o1, o2: np.linalg.norm(o1) - np.linalg.norm(o2))
+
+# mat_pow
+E = 50
+test_function("matrix_power",
+              lambda: np.linalg.matrix_power(B, E),
+              lambda: nw.matrix_power(B, E),
+              lambda o1, o2: np.linalg.norm(o1) - np.linalg.norm(o2))
