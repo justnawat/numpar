@@ -12,3 +12,4 @@ crate-type = ["cdylib"]
 rayon = "1.5"
 rand = "0.8"
 pyo3 = { version = "0.16.5", features = ["extension-module"] }
+atomic_float = "0.1"

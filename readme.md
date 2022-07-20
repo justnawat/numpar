@@ -63,3 +63,9 @@ The file `test.py` has some test cases for each of the implemented functions. Si
 Me to `numpy`:
 
 ![](https://i.imgflip.com/420wbf.png)
+
+# A more accurate Meme of the Repo
+
+`numpy` to me when it comes to anything matrix-related (because I suck at memory optimization):
+
+![](https://i.imgflip.com/420wbf.png)

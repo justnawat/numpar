@@ -3,12 +3,14 @@ use crate::my_util::{
     generate_identity_matrix, is_proper_matrix, is_square_matrix, row_major_to_matrix,
 };
 use crate::vector_ops::rust_dot;
+use atomic_float::AtomicF64;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::{PyInt, PyList};
 use pyo3::{pyfunction, PyResult};
 use rayon::iter::IndexedParallelIterator;
 use rayon::iter::IntoParallelIterator;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+use std::sync::atomic::Ordering::SeqCst;
 
 #[pyfunction]
 pub fn trace(matrix: &PyList) -> PyResult<f64> {
@@ -129,9 +131,9 @@ pub fn matmul(a: &PyList, b: &PyList) -> PyResult<Vec<Vec<f64>>> {
                 && is_proper_matrix(&b_mat)
                 && a_mat.len() == b_mat[0].len()
             {
-                let m = a_mat.len();
-                let n = b_mat.len();
-                let p = b_mat[0].len();
+                // let m = a_mat.len();
+                // let n = b_mat.len();
+                // let p = b_mat[0].len();
 
                 //let a_mat = a_mat.par_iter().flatten().map(|&e| e).collect();
                 //let b_mat = rust_transpose(&b_mat);
@@ -151,7 +153,7 @@ pub fn matmul(a: &PyList, b: &PyList) -> PyResult<Vec<Vec<f64>>> {
 // A = m*n, B = n*p, C = m*p
 pub fn rust_matmul(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let m = a.len();
-    let n = b.len();
+    // let n = b.len();
     let p = b[0].len();
 
     let mut c = vec![0.; m * p];
@@ -208,7 +210,76 @@ fn rmp_helper(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
     }
 }
 
+#[allow(dead_code)]
+pub fn fwd_elim(matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    let m = matrix.len();
+    let cols_count = matrix[0].len();
+
+    let res: Vec<AtomicF64> = matrix
+        .par_iter()
+        .flatten()
+        .map(|e| AtomicF64::new(*e))
+        .collect();
+    // dbg!(&res);
+
+    res.chunks_exact(cols_count)
+        .enumerate()
+        .for_each(|(i, row)| {
+            let head = row[i].load(SeqCst);
+            let b1 = i * cols_count;
+
+            // has to be done sequentially
+            (i + 1..m).for_each(|ii| {
+                let to_elim = res[(ii) * cols_count + i].load(SeqCst);
+                let factor = to_elim / head;
+                dbg!(head, to_elim, factor);
+
+                let b2 = ii * cols_count;
+                (i..cols_count).into_par_iter().for_each(|ei| {
+                    let delta = res[b1 + ei].load(SeqCst) * factor;
+                    res[b2 + ei].fetch_sub(delta, SeqCst);
+                })
+            })
+        });
+
+    let rm_res: Vec<f64> = res.par_iter().map(|af64| af64.load(SeqCst)).collect();
+    row_major_to_matrix(&rm_res, cols_count)
+}
+
 mod test {
+    #[test]
+    fn fwd_test() {
+        let a = vec![
+            vec![7, 7, 5, 5, 7],
+            vec![2, 3, 4, 5, 6],
+            vec![2, 2, 3, 3, 4],
+            vec![1, 2, 3, 4, 5],
+        ]
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|e| (*e as f64).round())
+                .collect::<Vec<f64>>()
+        })
+        .collect::<Vec<Vec<f64>>>();
+
+        let out = super::fwd_elim(&a)
+            .iter()
+            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+            .collect::<Vec<Vec<f64>>>();
+        let ans = vec![
+            vec![7., 7., 5., 5., 7.],
+            vec![0., 1., 2.57142857, 3.57142857, 4.],
+            vec![0., 0., 1.57142857, 1.57142857, 2.],
+            vec![0., 0., 0., 0., 0.36363636],
+        ]
+        .iter()
+        .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+        .collect::<Vec<Vec<f64>>>();
+
+        assert_eq!(&ans, &out);
+    }
+
     #[test]
     fn small_pow_test() {
         let a = super::rust_matpow(
