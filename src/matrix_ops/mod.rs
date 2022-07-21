@@ -1,6 +1,7 @@
 use crate::cwslice::UnsafeSlice;
 use crate::my_util::{
-    generate_identity_matrix, is_proper_matrix, is_square_matrix, row_major_to_matrix,
+    augment, extract_last_n_cols, generate_identity_matrix, is_proper_matrix, is_square_matrix,
+    row_major_to_matrix, simplify_soln,
 };
 use crate::vector_ops::rust_dot;
 use atomic_float::AtomicF64;
@@ -232,7 +233,39 @@ fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     res
 }
 
+pub fn rust_inv(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    let n = a.len();
+    let augmented = augment(a, &generate_identity_matrix(n));
+    // dbg!(&augmented);
+    let fwd = fwd_elim(&augmented);
+    // dbg!(&fwd);
+    let solved = bwd_subs(&fwd);
+    // dbg!(&solved);
+    let simple = simplify_soln(&solved);
+    // dbg!(&simple);
+    extract_last_n_cols(&simple, n)
+}
+
 mod test {
+    #[test]
+    fn inv_test() {
+        let a = vec![vec![7., 7., 6.], vec![6., 2., 2.], vec![3., 3., 1.]];
+        let out = super::rust_inv(&a)
+            .iter()
+            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+            .collect::<Vec<Vec<f64>>>();
+        let ans = vec![
+            vec![-0.0909, 0.25, 0.04545],
+            vec![0., -0.25, 0.5],
+            vec![0.272727, 0., -0.636363],
+        ]
+        .iter()
+        .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+        .collect::<Vec<Vec<f64>>>();
+
+        assert_eq!(&ans, &out);
+    }
+
     #[test]
     fn fwd_test() {
         let a = vec![

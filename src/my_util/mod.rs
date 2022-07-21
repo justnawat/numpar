@@ -6,6 +6,16 @@ use rayon::{
     slice::ParallelSlice,
 };
 
+pub fn simplify_soln(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    a.par_iter()
+        .enumerate()
+        .map(|(i, row)| {
+            let factor = row[i];
+            row.par_iter().map(|&e| e / factor).collect()
+        })
+        .collect()
+}
+
 #[allow(dead_code)]
 pub fn split_last_col(a: &Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>) {
     let m = a.len();
