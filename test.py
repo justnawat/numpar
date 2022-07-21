@@ -92,3 +92,10 @@ test_function("inv",
               lambda: np.linalg.inv(A),
               lambda: nw.inv(A),
               lambda o1, o2: np.linalg.norm(o1-o2))
+
+# solve
+b = [rd.random() * rd.randint(1, 10) for _ in range(N)]
+test_function("solve",
+              lambda: np.linalg.solve(A, b),
+              lambda: nw.solve(A, b),
+              lambda o1, o2: np.linalg.norm(o1-o2))

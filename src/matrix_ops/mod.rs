@@ -1,7 +1,7 @@
 use crate::cwslice::UnsafeSlice;
 use crate::my_util::{
     augment, extract_last_n_cols, generate_identity_matrix, is_proper_matrix, is_square_matrix,
-    row_major_to_matrix, simplify_soln,
+    row_major_to_matrix, simplify_soln, split_last_col,
 };
 use crate::vector_ops::rust_dot;
 use atomic_float::AtomicF64;
@@ -205,7 +205,6 @@ fn fwd_elim(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     res
 }
 
-#[allow(dead_code)]
 fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let n = a[0].len();
 
@@ -250,17 +249,48 @@ pub fn inv(a: &PyList) -> PyResult<Vec<Vec<f64>>> {
 pub fn rust_inv(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let n = a.len();
     let augmented = augment(a, &generate_identity_matrix(n));
-    // dbg!(&augmented);
     let fwd = fwd_elim(&augmented);
-    // dbg!(&fwd);
     let solved = bwd_subs(&fwd);
-    // dbg!(&solved);
     let simple = simplify_soln(&solved);
-    // dbg!(&simple);
     extract_last_n_cols(&simple, n)
 }
 
+#[pyfunction]
+pub fn solve(a: &PyList, b: &PyList) -> PyResult<Vec<f64>> {
+    match (a.extract::<Vec<Vec<f64>>>(), b.extract::<Vec<f64>>()) {
+        (Ok(a_mat), Ok(b_vec)) => {
+            if is_square_matrix(&a_mat) {
+                Ok(rust_solve(&a_mat, &b_vec))
+            } else {
+                Err(PyTypeError::new_err("Malformed parameter"))
+            }
+        }
+        _ => Err(PyTypeError::new_err("Malformed parameter")),
+    }
+}
+
+pub fn rust_solve(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Vec<f64> {
+    let augmented = augment(a, &b.par_iter().map(|&e| vec![e]).collect());
+    let fwd = fwd_elim(&augmented);
+    let solved = bwd_subs(&fwd);
+    let simple = simplify_soln(&solved);
+    split_last_col(&simple).1
+}
+
 mod test {
+    #[test]
+    fn solve_test() {
+        let a = vec![vec![1., 2., 2.], vec![3., 2., 5.], vec![7., 7., 1.]];
+        let b = vec![1., 1., 1.];
+
+        let ans = vec![-0.3333, 0.4444, 0.2222];
+        let out: Vec<f64> = super::rust_solve(&a, &b)
+            .iter()
+            .map(|&e| (e * 10000.).round() / 10000.)
+            .collect();
+        assert_eq!(&ans, &out);
+    }
+
     #[test]
     fn inv_test() {
         let a = vec![vec![7., 7., 6.], vec![6., 2., 2.], vec![3., 3., 1.]];
