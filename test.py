@@ -86,3 +86,9 @@ test_function("matrix_power",
               lambda: np.linalg.matrix_power(B, E),
               lambda: nw.matrix_power(B, E),
               lambda o1, o2: np.linalg.norm(o1-o2))
+
+# inv
+test_function("inv",
+              lambda: np.linalg.inv(A),
+              lambda: nw.inv(A),
+              lambda o1, o2: np.linalg.norm(o1-o2))

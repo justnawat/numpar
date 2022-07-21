@@ -212,7 +212,7 @@ fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let res: Vec<AtomicF64> = a.par_iter().flatten().map(|e| AtomicF64::new(*e)).collect();
 
     res.chunks_exact(n).enumerate().rev().for_each(|(i, row)| {
-        dbg!(row);
+        // dbg!(row);
         let tail = row[i].load(SeqCst);
         let b1 = i * n;
 
@@ -231,6 +231,20 @@ fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let rm_res: Vec<f64> = res.par_iter().map(|af64| af64.load(SeqCst)).collect();
     let res = row_major_to_matrix(&rm_res, n);
     res
+}
+
+#[pyfunction]
+pub fn inv(a: &PyList) -> PyResult<Vec<Vec<f64>>> {
+    match a.extract::<Vec<Vec<f64>>>() {
+        Ok(a_mat) => {
+            if is_square_matrix(&a_mat) {
+                Ok(rust_inv(&a_mat))
+            } else {
+                Err(PyTypeError::new_err("Malformed parameter"))
+            }
+        }
+        _ => Err(PyTypeError::new_err("Malformed parameter")),
+    }
 }
 
 pub fn rust_inv(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
