@@ -24,6 +24,7 @@ fn numpar(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(matrix_power, m)?)?;
 
     m.add_function(wrap_pyfunction!(solve, m)?)?;
+    m.add_function(wrap_pyfunction!(matrix_rank, m)?)?;
 
     Ok(())
 }

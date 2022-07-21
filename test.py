@@ -99,3 +99,9 @@ test_function("solve",
               lambda: np.linalg.solve(A, b),
               lambda: nw.solve(A, b),
               lambda o1, o2: np.linalg.norm(o1-o2))
+
+# matrix_rank
+test_function("matrix_rank",
+              lambda: np.linalg.matrix_rank(A),
+              lambda: nw.matrix_rank(A),
+              lambda o1, o2: np.linalg.norm(o1-o2))

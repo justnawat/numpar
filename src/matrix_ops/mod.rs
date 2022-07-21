@@ -277,6 +277,44 @@ pub fn rust_solve(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Vec<f64> {
     split_last_col(&simple).1
 }
 
+#[pyfunction]
+pub fn matrix_rank(a: &PyList) -> PyResult<usize> {
+    match a.extract::<Vec<Vec<f64>>>() {
+        Ok(a_mat) => {
+            if is_square_matrix(&a_mat) {
+                Ok(rust_mat_rank(&a_mat))
+            } else {
+                Err(PyTypeError::new_err("Malformed parameter"))
+            }
+        }
+        _ => Err(PyTypeError::new_err("Malformed parameter")),
+    }
+}
+
+pub fn rust_mat_rank(a: &Vec<Vec<f64>>) -> usize {
+    let fwd = fwd_elim(a);
+    let solved = bwd_subs(&fwd);
+    let simple = simplify_soln(&solved);
+    let first_non_zeros: Vec<f64> = simple
+        .par_iter()
+        .enumerate()
+        .map(|(i, row)| first_non_zero(row, i))
+        .collect();
+    first_non_zeros
+        .par_iter()
+        .fold(
+            || 0usize,
+            |acc, &elm| if elm.abs() > 1e-10 { acc + 1 } else { acc },
+        )
+        .sum()
+}
+
+fn first_non_zero(a: &Vec<f64>, b: usize) -> f64 {
+    a[b..]
+        .iter()
+        .fold(0., |acc, &elm| if elm.abs() > 1e-10 { elm } else { acc })
+}
+
 mod test {
     #[test]
     fn solve_test() {
