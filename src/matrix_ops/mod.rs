@@ -205,93 +205,34 @@ fn fwd_elim(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
 }
 
 #[allow(dead_code)]
-pub fn augment(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    a.par_iter()
-        .zip(b.par_iter())
-        .map(|(a_row, b_row)| {
-            let mut c = vec![];
-            c.extend(a_row);
-            c.extend(b_row);
-            c
+fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    let n = a[0].len();
+
+    let res: Vec<AtomicF64> = a.par_iter().flatten().map(|e| AtomicF64::new(*e)).collect();
+
+    res.chunks_exact(n).enumerate().rev().for_each(|(i, row)| {
+        dbg!(row);
+        let tail = row[i].load(SeqCst);
+        let b1 = i * n;
+
+        (0..i).into_par_iter().for_each(|ii| {
+            let to_elim = res[ii * n + i].load(SeqCst);
+            let factor = to_elim / tail;
+
+            let b2 = ii * n;
+            (i..n).into_par_iter().for_each(|ei| {
+                let delta = res[b1 + ei].load(SeqCst) * factor;
+                res[b2 + ei].fetch_sub(delta, SeqCst);
+            })
         })
-        .collect()
-}
-
-#[allow(dead_code)]
-pub fn extract_last_n_cols(a: &Vec<Vec<f64>>, n: usize) -> Vec<Vec<f64>> {
-    let b = a[0].len() - n;
-    a.par_iter().map(|a_row| a_row[b..].to_vec()).collect()
-}
-
-pub fn split_last_col(a: &Vec<Vec<f64>>) -> (Vec<Vec<f64>>, Vec<f64>) {
-    let m = a.len();
-    let idx = a[0].len() - 1;
-
-    let mut o1 = vec![vec![]; idx];
-    let mut o2 = vec![0.; m];
-
-    let u1 = UnsafeSlice::new(o1.as_mut_slice());
-    let u2 = UnsafeSlice::new(o2.as_mut_slice());
-
-    a.par_iter().enumerate().for_each(|(i, row)| {
-        let (l, r) = row.split_at(idx);
-        unsafe {
-            u1.write(i, l.to_vec());
-            u2.write(i, r[0]);
-        }
     });
 
-    (o1, o2)
+    let rm_res: Vec<f64> = res.par_iter().map(|af64| af64.load(SeqCst)).collect();
+    let res = row_major_to_matrix(&rm_res, n);
+    res
 }
 
 mod test {
-    #[test]
-    fn sl_test() {
-        let a = vec![
-            vec![1., 2., 3., 4.],
-            vec![2., 3., 4., 5.],
-            vec![3., 4., 5., 6.],
-        ];
-
-        let (a, b) = super::split_last_col(&a);
-        let ans_a = vec![vec![1., 2., 3.], vec![2., 3., 4.], vec![3., 4., 5.]];
-        let ans_b = vec![4., 5., 6.];
-        assert_eq!(&a, &ans_a);
-        assert_eq!(&b, &ans_b);
-    }
-
-    #[test]
-    fn extract_test() {
-        use crate::my_util::generate_identity_matrix;
-        let a: Vec<Vec<f64>> = vec![
-            vec![1, 0, 0, 1, 0, 0],
-            vec![0, 1, 0, 0, 1, 0],
-            vec![0, 0, 1, 0, 0, 1],
-        ]
-        .iter()
-        .map(|row| row.iter().map(|e| *e as f64).collect())
-        .collect();
-        let out = super::extract_last_n_cols(&a, 3);
-        assert_eq!(&generate_identity_matrix(3), &out);
-    }
-
-    #[test]
-    fn aug_test() {
-        use crate::my_util::generate_identity_matrix;
-        let a = generate_identity_matrix(3);
-        let b = generate_identity_matrix(3);
-        let ans: Vec<Vec<f64>> = vec![
-            vec![1, 0, 0, 1, 0, 0],
-            vec![0, 1, 0, 0, 1, 0],
-            vec![0, 0, 1, 0, 0, 1],
-        ]
-        .iter()
-        .map(|row| row.iter().map(|e| *e as f64).collect())
-        .collect();
-
-        assert_eq!(&ans, &super::augment(&a, &b));
-    }
-
     #[test]
     fn fwd_test() {
         let a = vec![
@@ -308,21 +249,35 @@ mod test {
         })
         .collect::<Vec<Vec<f64>>>();
 
-        // let out = super::fwd_elim(&a)
-        //     .iter()
-        //     .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-        //     .collect::<Vec<Vec<f64>>>();
-        // let ans = vec![
-        //     vec![7., 7., 5., 5., 7.],
-        //     vec![0., 1., 2.57142857, 3.57142857, 4.],
-        //     vec![0., 0., 1.57142857, 1.57142857, 2.],
-        //     vec![0., 0., 0., 0., 0.36363636],
-        // ]
-        // .iter()
-        // .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-        // .collect::<Vec<Vec<f64>>>();
+        let out = super::fwd_elim(&a)
+            .iter()
+            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+            .collect::<Vec<Vec<f64>>>();
+        let ans = vec![
+            vec![7., 7., 5., 5., 7.],
+            vec![0., 1., 2.57142857, 3.57142857, 4.],
+            vec![0., 0., 1.57142857, 1.57142857, 2.],
+            vec![0., 0., 0., 0., 0.36363636],
+        ]
+        .iter()
+        .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+        .collect::<Vec<Vec<f64>>>();
 
-        // assert_eq!(&ans, &out);
+        assert_eq!(&ans, &out);
+    }
+
+    #[test]
+    fn bwd_test() {
+        let a = super::fwd_elim(&vec![vec![7., 7., 6.], vec![6., 2., 2.], vec![3., 3., 1.]]);
+        let out = super::bwd_subs(&a)
+            .iter()
+            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+            .collect::<Vec<Vec<f64>>>();
+        let ans = vec![vec![7., 0., 0.], vec![0., -4., 0.], vec![0., 0., -1.5714]]
+            .iter()
+            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
+            .collect::<Vec<Vec<f64>>>();
+        assert_eq!(&ans, &out);
     }
 
     #[test]
