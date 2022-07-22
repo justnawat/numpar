@@ -79,6 +79,10 @@ test_function("matmul",
               lambda: np.matmul(A, B),
               lambda: nw.matmul(A, B),
               lambda o1, o2: np.linalg.norm(o1-o2))
+# test_function("matmul2",
+#               lambda: np.matmul(A, B),
+#               lambda: nw.matmul2(A, B),
+#               lambda o1, o2: np.linalg.norm(o1-o2))
 
 # mat_pow
 E = 50
