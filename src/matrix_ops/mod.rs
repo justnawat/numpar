@@ -1,17 +1,14 @@
 use crate::cwslice::UnsafeSlice;
+use crate::linear_eqn_ops::*;
 use crate::my_util::{
     augment, extract_last_n_cols, generate_identity_matrix, is_proper_matrix, is_square_matrix,
-    row_major_to_matrix, simplify_soln, split_last_col,
+    row_major_to_matrix, simplify_soln,
 };
-use crate::vector_ops::rust_dot;
-use atomic_float::AtomicF64;
 use pyo3::exceptions::PyTypeError;
-use pyo3::types::{PyInt, PyList};
+use pyo3::types::PyList;
 use pyo3::{pyfunction, PyResult};
 use rayon::iter::IndexedParallelIterator;
-use rayon::iter::IntoParallelIterator;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
-use std::sync::atomic::Ordering::SeqCst;
 
 #[pyfunction]
 pub fn trace(matrix: &PyList) -> PyResult<f64> {
@@ -88,151 +85,6 @@ pub fn rust_transpose(r_matrix: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
 }
 
 #[pyfunction]
-pub fn matmul(a: &PyList, b: &PyList) -> PyResult<Vec<Vec<f64>>> {
-    match (a.extract::<Vec<Vec<f64>>>(), b.extract::<Vec<Vec<f64>>>()) {
-        (Ok(a_mat), Ok(b_mat)) => {
-            if a_mat.len() == 0 || b_mat.len() == 0 {
-                Err(PyTypeError::new_err("Malformed parameter(s)"))
-            } else if is_proper_matrix(&a_mat)
-                && is_proper_matrix(&b_mat)
-                && a_mat.len() == b_mat[0].len()
-            {
-                // let m = a_mat.len();
-                // let n = b_mat.len();
-                // let p = b_mat[0].len();
-
-                //let a_mat = a_mat.par_iter().flatten().map(|&e| e).collect();
-                //let b_mat = rust_transpose(&b_mat);
-                //let b_mat = b_mat.par_iter().flatten().map(|&e| e).collect();
-                let res = rust_matmul(&a_mat, &b_mat);
-
-                //Ok(row_major_to_matrix(&res, p))
-                Ok(res)
-            } else {
-                Err(PyTypeError::new_err("Malformed parameter(s)"))
-            }
-        }
-        _ => Err(PyTypeError::new_err("Malformed parameter(s)")),
-    }
-}
-
-// A = m*n, B = n*p, C = m*p
-pub fn rust_matmul(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    let m = a.len();
-    // let n = b.len();
-    let p = b[0].len();
-
-    let mut c = vec![0.; m * p];
-    let unsafe_c = UnsafeSlice::new(c.as_mut_slice());
-    let b = rust_transpose(b);
-
-    a.par_iter().enumerate().for_each(|(i, a_row)| {
-        b.par_iter().enumerate().for_each(|(j, bt_row)| unsafe {
-            unsafe_c.write(i * p + j, rust_dot(a_row, bt_row));
-        });
-    });
-
-    row_major_to_matrix(&c, p)
-}
-
-#[pyfunction]
-pub fn matrix_power(a: &PyList, exp: &PyInt) -> PyResult<Vec<Vec<f64>>> {
-    match (a.extract::<Vec<Vec<f64>>>(), exp.extract::<u32>()) {
-        (Ok(a_mat), Ok(exp)) => {
-            if a_mat.len() == 0 {
-                Err(PyTypeError::new_err("Malformed parameter(s)"))
-            } else if is_square_matrix(&a_mat) {
-                Ok(rust_matpow(&a_mat, exp))
-            } else {
-                Err(PyTypeError::new_err("Malformed parameter(s)"))
-            }
-        }
-        _ => Err(PyTypeError::new_err("Malformed parameter(s)")),
-    }
-}
-
-pub fn rust_matpow(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
-    //let n = a.len();
-    //let flattened = a.par_iter().flatten().map(|&e| e).collect();
-    let res = rmp_helper(a, exp);
-    //row_major_to_matrix(&res, n);
-    res
-}
-
-fn rmp_helper(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
-    const PAR_EXP_MIN: u32 = 8;
-
-    let n = a.len();
-    if exp <= PAR_EXP_MIN {
-        let mut res = generate_identity_matrix(n);
-        for _ in 0..exp {
-            res = rust_matmul(&res, a);
-        }
-        res
-    } else {
-        let odd = exp % 2;
-        let (a1, a2) = rayon::join(|| rmp_helper(a, exp / 2), || rmp_helper(a, exp / 2 + odd));
-        rust_matmul(&a1, &a2)
-    }
-}
-
-fn fwd_elim(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    let m = a.len();
-    let n = a[0].len();
-
-    let res: Vec<AtomicF64> = a.par_iter().flatten().map(|e| AtomicF64::new(*e)).collect();
-    // dbg!(&res);
-
-    res.chunks_exact(n).enumerate().for_each(|(i, row)| {
-        let head = row[i].load(SeqCst);
-        let b1 = i * n;
-
-        (i + 1..m).into_par_iter().for_each(|ii| {
-            let to_elim = res[(ii) * n + i].load(SeqCst);
-            let factor = to_elim / head;
-            // dbg!(head, to_elim, factor);
-
-            let b2 = ii * n;
-            (i..n).into_par_iter().for_each(|ei| {
-                let delta = res[b1 + ei].load(SeqCst) * factor;
-                res[b2 + ei].fetch_sub(delta, SeqCst);
-            })
-        })
-    });
-
-    let rm_res: Vec<f64> = res.par_iter().map(|af64| af64.load(SeqCst)).collect();
-    let res = row_major_to_matrix(&rm_res, n);
-    res
-}
-
-fn bwd_subs(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    let n = a[0].len();
-
-    let res: Vec<AtomicF64> = a.par_iter().flatten().map(|e| AtomicF64::new(*e)).collect();
-
-    res.chunks_exact(n).enumerate().rev().for_each(|(i, row)| {
-        // dbg!(row);
-        let tail = row[i].load(SeqCst);
-        let b1 = i * n;
-
-        (0..i).into_par_iter().for_each(|ii| {
-            let to_elim = res[ii * n + i].load(SeqCst);
-            let factor = to_elim / tail;
-
-            let b2 = ii * n;
-            (i..n).into_par_iter().for_each(|ei| {
-                let delta = res[b1 + ei].load(SeqCst) * factor;
-                res[b2 + ei].fetch_sub(delta, SeqCst);
-            })
-        })
-    });
-
-    let rm_res: Vec<f64> = res.par_iter().map(|af64| af64.load(SeqCst)).collect();
-    let res = row_major_to_matrix(&rm_res, n);
-    res
-}
-
-#[pyfunction]
 pub fn inv(a: &PyList) -> PyResult<Vec<Vec<f64>>> {
     match a.extract::<Vec<Vec<f64>>>() {
         Ok(a_mat) => {
@@ -255,80 +107,7 @@ pub fn rust_inv(a: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     extract_last_n_cols(&simple, n)
 }
 
-#[pyfunction]
-pub fn solve(a: &PyList, b: &PyList) -> PyResult<Vec<f64>> {
-    match (a.extract::<Vec<Vec<f64>>>(), b.extract::<Vec<f64>>()) {
-        (Ok(a_mat), Ok(b_vec)) => {
-            if is_square_matrix(&a_mat) {
-                Ok(rust_solve(&a_mat, &b_vec))
-            } else {
-                Err(PyTypeError::new_err("Malformed parameter"))
-            }
-        }
-        _ => Err(PyTypeError::new_err("Malformed parameter")),
-    }
-}
-
-pub fn rust_solve(a: &Vec<Vec<f64>>, b: &Vec<f64>) -> Vec<f64> {
-    let augmented = augment(a, &b.par_iter().map(|&e| vec![e]).collect());
-    let fwd = fwd_elim(&augmented);
-    let solved = bwd_subs(&fwd);
-    let simple = simplify_soln(&solved);
-    split_last_col(&simple).1
-}
-
-#[pyfunction]
-pub fn matrix_rank(a: &PyList) -> PyResult<usize> {
-    match a.extract::<Vec<Vec<f64>>>() {
-        Ok(a_mat) => {
-            if is_square_matrix(&a_mat) {
-                Ok(rust_mat_rank(&a_mat))
-            } else {
-                Err(PyTypeError::new_err("Malformed parameter"))
-            }
-        }
-        _ => Err(PyTypeError::new_err("Malformed parameter")),
-    }
-}
-
-pub fn rust_mat_rank(a: &Vec<Vec<f64>>) -> usize {
-    let fwd = fwd_elim(a);
-    let solved = bwd_subs(&fwd);
-    let simple = simplify_soln(&solved);
-    let first_non_zeros: Vec<f64> = simple
-        .par_iter()
-        .enumerate()
-        .map(|(i, row)| first_non_zero(row, i))
-        .collect();
-    first_non_zeros
-        .par_iter()
-        .fold(
-            || 0usize,
-            |acc, &elm| if elm.abs() > 1e-10 { acc + 1 } else { acc },
-        )
-        .sum()
-}
-
-fn first_non_zero(a: &Vec<f64>, b: usize) -> f64 {
-    a[b..]
-        .iter()
-        .fold(0., |acc, &elm| if elm.abs() > 1e-10 { elm } else { acc })
-}
-
 mod test {
-    #[test]
-    fn solve_test() {
-        let a = vec![vec![1., 2., 2.], vec![3., 2., 5.], vec![7., 7., 1.]];
-        let b = vec![1., 1., 1.];
-
-        let ans = vec![-0.3333, 0.4444, 0.2222];
-        let out: Vec<f64> = super::rust_solve(&a, &b)
-            .iter()
-            .map(|&e| (e * 10000.).round() / 10000.)
-            .collect();
-        assert_eq!(&ans, &out);
-    }
-
     #[test]
     fn inv_test() {
         let a = vec![vec![7., 7., 6.], vec![6., 2., 2.], vec![3., 3., 1.]];
@@ -346,97 +125,6 @@ mod test {
         .collect::<Vec<Vec<f64>>>();
 
         assert_eq!(&ans, &out);
-    }
-
-    #[test]
-    fn fwd_test() {
-        let a = vec![
-            vec![7, 7, 5, 5, 7],
-            vec![2, 3, 4, 5, 6],
-            vec![2, 2, 3, 3, 4],
-            vec![1, 2, 3, 4, 5],
-        ]
-        .iter()
-        .map(|row| {
-            row.iter()
-                .map(|e| (*e as f64).round())
-                .collect::<Vec<f64>>()
-        })
-        .collect::<Vec<Vec<f64>>>();
-
-        let out = super::fwd_elim(&a)
-            .iter()
-            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-            .collect::<Vec<Vec<f64>>>();
-        let ans = vec![
-            vec![7., 7., 5., 5., 7.],
-            vec![0., 1., 2.57142857, 3.57142857, 4.],
-            vec![0., 0., 1.57142857, 1.57142857, 2.],
-            vec![0., 0., 0., 0., 0.36363636],
-        ]
-        .iter()
-        .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-        .collect::<Vec<Vec<f64>>>();
-
-        assert_eq!(&ans, &out);
-    }
-
-    #[test]
-    fn bwd_test() {
-        let a = super::fwd_elim(&vec![vec![7., 7., 6.], vec![6., 2., 2.], vec![3., 3., 1.]]);
-        let out = super::bwd_subs(&a)
-            .iter()
-            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-            .collect::<Vec<Vec<f64>>>();
-        let ans = vec![vec![7., 0., 0.], vec![0., -4., 0.], vec![0., 0., -1.5714]]
-            .iter()
-            .map(|row| row.iter().map(|&e| f64::round(e)).collect::<Vec<f64>>())
-            .collect::<Vec<Vec<f64>>>();
-        assert_eq!(&ans, &out);
-    }
-
-    #[test]
-    fn small_pow_test() {
-        let a = super::rust_matpow(
-            &vec![
-                vec![10.0, 0.0, 0.0],
-                vec![0.0, 10.0, 0.0],
-                vec![0.0, 0.0, 10.0],
-            ],
-            129,
-        )
-        .iter()
-        .map(|v| v.iter().sum::<f64>())
-        .sum::<f64>();
-
-        let ans = vec![
-            vec![1e129, 0.0, 0.0],
-            vec![0.0, 1e129, 0.0],
-            vec![0.0, 0.0, 1e129],
-        ]
-        .iter()
-        .map(|v| v.iter().sum::<f64>())
-        .sum::<f64>();
-
-        dbg!((a - ans).abs());
-    }
-
-    #[test]
-    fn mul_test() {
-        let a = vec![[5, 5, 5], [2, 4, 6], [1, 0, 0]]
-            .iter()
-            .map(|v| v.iter().map(|x| *x as f64).collect::<Vec<f64>>())
-            .collect();
-        let b = vec![[7, 1, 7], [7, 2, 4], [7, 3, 1]]
-            .iter()
-            .map(|v| v.iter().map(|x| *x as f64).collect::<Vec<f64>>())
-            .collect();
-        let ans: Vec<Vec<f64>> = vec![[105, 30, 60], [84, 28, 36], [7, 1, 7]]
-            .iter()
-            .map(|v| v.iter().map(|x| *x as f64).collect::<Vec<f64>>())
-            .collect();
-        let c = super::rust_matmul(&a, &b);
-        assert_eq!(&ans, &c);
     }
 
     #[test]

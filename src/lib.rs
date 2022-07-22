@@ -1,12 +1,16 @@
 use pyo3::prelude::*;
+
 mod cwslice;
 mod my_util;
-
 mod vector_ops;
-use vector_ops::*;
-
 mod matrix_ops;
+mod matrix_mult;
+mod linear_eqn_ops;
+
+use vector_ops::*;
 use matrix_ops::*;
+use matrix_mult::*;
+use linear_eqn_ops::*;
 
 /// A Python module implemented in Rust.
 #[pymodule]

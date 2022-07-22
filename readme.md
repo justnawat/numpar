@@ -24,7 +24,8 @@ The full proposal can be found in `Proposal.pdf`
 
 ## Idea
 
-This project aims to implement the following methods from `numpy` (as `np`) in Rust such that they will default to running in parallel when possible or beneficial:
+This project aims to implement the following methods from `numpy` (as `np`) in Rust such that they will default to
+running in parallel when possible or beneficial:
 
 ### Basic Vector Operations
 
@@ -48,15 +49,18 @@ This project aims to implement the following methods from `numpy` (as `np`) in R
 ### Matrix and System of Linear Equations-related Operations
 
 - `np.linalg.solve`: Solve a matrix equation (Done, slow)
-- `np.linalg.matrix_rank`: Rank of matrix
+- `np.linalg.matrix_rank`: Rank of matrix (Done, slow)
 
 Note that some of these may not be implemented by submission date due to ~~laziness~~ not having enough time to work.
 
 ## Measuring Success
 
-We are measuring success using the running time of each function that will implemented compared to vanilla NumPy on large data (suppose a function is for matrix computation, then the matrix would need to be quite large to minimize parallelism overhead. If it can beat NumPy, great. If it cannot, then that's unfortunate.
+We are measuring success using the running time of each function that will implemented compared to vanilla NumPy on
+large data (suppose a function is for matrix computation, then the matrix would need to be quite large to minimize
+parallelism overhead. If it can beat NumPy, great. If it cannot, then that's unfortunate.
 
-The file `test.py` has some test cases for each of the implemented functions. Simply run the `run.sh` script to run the test cases. Also, make sure that you have the right dependencies.
+The file `test.py` has some test cases for each of the implemented functions. Simply run the `run.sh` script to run the
+test cases. Also, make sure that you have the right dependencies.
 
 # Meme of the Repo
 
