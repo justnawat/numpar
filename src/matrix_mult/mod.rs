@@ -3,9 +3,7 @@ use atomic_float::AtomicF64;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::{PyInt, PyList};
 use pyo3::{pyfunction, PyResult};
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator, ParallelIterator,
-};
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use rayon::slice::ParallelSlice;
 use std::sync::atomic::Ordering::SeqCst;
 
@@ -67,6 +65,7 @@ pub fn matmul(a: &PyList, b: &PyList) -> PyResult<Vec<Vec<f64>>> {
 // A = m*n, B = n*p, C = m*p
 pub fn rust_matmul2(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
     let m = a.len();
+    let n = b.len();
     let p = b[0].len();
 
     let c: Vec<AtomicF64> = (0..m * p)
@@ -74,21 +73,30 @@ pub fn rust_matmul2(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
         .map(|_| AtomicF64::new(0.))
         .collect();
 
-    c.par_chunks(p)
-        .zip(a.par_iter())
-        .for_each(|(c_row, a_row)| {
-            a_row
-                .par_iter()
-                .zip(b.par_iter())
-                .for_each(|(a_row_elm, b_row)| {
-                    c_row
-                        .par_iter()
-                        .zip(b_row.par_iter())
-                        .for_each(|(c_row_elm, b_row_elm)| {
-                            c_row_elm.fetch_add(a_row_elm * b_row_elm, SeqCst);
-                        });
-                });
-        });
+    (0..m).into_par_iter().for_each(|i| {
+        (0..p).into_par_iter().for_each(|k| {
+            (0..n).into_par_iter().for_each(|j| {
+                let to_add = a[i][k] * b[k][j];
+                c[i * p + j].fetch_add(to_add, SeqCst);
+            })
+        })
+    });
+
+    // c.par_chunks(p)
+    //     .zip(a.par_iter())
+    //     .for_each(|(c_row, a_row)| {
+    //         a_row
+    //             .par_iter()
+    //             .zip(b.par_iter())
+    //             .for_each(|(a_row_elm, b_row)| {
+    //                 c_row
+    //                     .par_iter()
+    //                     .zip(b_row.par_iter())
+    //                     .for_each(|(c_row_elm, b_row_elm)| {
+    //                         c_row_elm.fetch_add(a_row_elm * b_row_elm, SeqCst);
+    //                     });
+    //             });
+    //     });
 
     let c_mat = c
         .par_chunks(p)
@@ -114,10 +122,7 @@ pub fn matrix_power(a: &PyList, exp: &PyInt) -> PyResult<Vec<Vec<f64>>> {
 }
 
 pub fn rust_matpow(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
-    //let n = a.len();
-    //let flattened = a.par_iter().flatten().map(|&e| e).collect();
     let res = rmp_helper(a, exp);
-    //row_major_to_matrix(&res, n);
     res
 }
 

@@ -52,7 +52,7 @@ test_function("outer",
 
 # trace
 N = 500
-A = [[rd.random() * rd.randint(1, 5) for _ in range(N)] for _ in range(N)]
+A = [[rd.random() for _ in range(N)] for _ in range(N)]
 test_function("trace",
               lambda: np.trace(A),
               lambda: nw.trace(A),
@@ -74,7 +74,7 @@ test_function("transpose",
               lambda o1, o2: np.linalg.norm(o1-o2))
 
 # matmul
-B = [[rd.random() - 0.5 for _ in range(N)] for _ in range(N)]
+B = [[rd.random() for _ in range(N)] for _ in range(N)]
 test_function("matmul",
               lambda: np.matmul(A, B),
               lambda: nw.matmul(A, B),
