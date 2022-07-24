@@ -20,7 +20,7 @@ pip install numpy maturin
 
 # A Quick Look at the Project
 
-The full proposal can be found in `Proposal.pdf`
+The full proposal can be found in `Proposal.pdf`. The report/writeup for the project can be found under `Report.pdf`.
 
 ## Idea
 
