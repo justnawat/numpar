@@ -1,4 +1,4 @@
-use crate::my_util::{generate_identity_matrix, is_proper_matrix, is_square_matrix};
+use crate::my_util::{generate_identity_matrix_row_major, is_proper_matrix, is_square_matrix};
 use atomic_float::AtomicF64;
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::{PyInt, PyList};
@@ -82,22 +82,6 @@ pub fn rust_matmul2(a: &Vec<Vec<f64>>, b: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
         })
     });
 
-    // c.par_chunks(p)
-    //     .zip(a.par_iter())
-    //     .for_each(|(c_row, a_row)| {
-    //         a_row
-    //             .par_iter()
-    //             .zip(b.par_iter())
-    //             .for_each(|(a_row_elm, b_row)| {
-    //                 c_row
-    //                     .par_iter()
-    //                     .zip(b_row.par_iter())
-    //                     .for_each(|(c_row_elm, b_row_elm)| {
-    //                         c_row_elm.fetch_add(a_row_elm * b_row_elm, SeqCst);
-    //                     });
-    //             });
-    //     });
-
     let c_mat = c
         .par_chunks(p)
         .map(|row| row.par_iter().map(|e| e.load(SeqCst)).collect::<Vec<f64>>())
@@ -122,25 +106,57 @@ pub fn matrix_power(a: &PyList, exp: &PyInt) -> PyResult<Vec<Vec<f64>>> {
 }
 
 pub fn rust_matpow(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
-    let res = rmp_helper(a, exp);
-    res
+    let n = a.len();
+    rmp_helper(a, exp, n)
+        .par_chunks(a.len())
+        .map(|chunk| {
+            chunk
+                .par_iter()
+                .map(|e| e.load(SeqCst))
+                .collect::<Vec<f64>>()
+        })
+        .collect()
 }
 
-fn rmp_helper(a: &Vec<Vec<f64>>, exp: u32) -> Vec<Vec<f64>> {
+fn rmp_helper(a: &Vec<Vec<f64>>, exp: u32, n: usize) -> Vec<AtomicF64> {
     const PAR_EXP_MIN: u32 = 8;
 
-    let n = a.len();
     if exp <= PAR_EXP_MIN {
-        let mut res = generate_identity_matrix(n);
+        let mut res = generate_identity_matrix_row_major(n)
+            .par_iter()
+            .map(|&e| AtomicF64::new(e))
+            .collect();
+        let flat_a = a.par_iter().flatten().map(|&e| AtomicF64::new(e)).collect();
         for _ in 0..exp {
-            res = rust_matmul2(&res, a);
+            res = rust_flat_matmul(&res, &flat_a, n);
         }
         res
     } else {
         let odd = exp % 2;
-        let (a1, a2) = rayon::join(|| rmp_helper(a, exp / 2), || rmp_helper(a, exp / 2 + odd));
-        rust_matmul2(&a1, &a2)
+        let (a1, a2) = rayon::join(
+            || rmp_helper(a, exp / 2, n),
+            || rmp_helper(a, exp / 2 + odd, n),
+        );
+        rust_flat_matmul(&a1, &a2, n)
     }
+}
+
+pub fn rust_flat_matmul(a: &Vec<AtomicF64>, b: &Vec<AtomicF64>, n: usize) -> Vec<AtomicF64> {
+    let c: Vec<AtomicF64> = (0..n * n)
+        .into_par_iter()
+        .map(|_| AtomicF64::new(0.))
+        .collect();
+
+    (0..n).into_par_iter().for_each(|i| {
+        (0..n).into_par_iter().for_each(|k| {
+            (0..n).into_par_iter().for_each(|j| {
+                let to_add = a[i * n + k].load(SeqCst) * b[k * n + j].load(SeqCst);
+                c[i * n + j].fetch_add(to_add, SeqCst);
+            })
+        })
+    });
+
+    c
 }
 
 mod test {
